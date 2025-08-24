@@ -1,4 +1,4 @@
-# Tapo Monitor and Control
+# Monitor and Control
 Tapo Hub H200 Monitor and Control
 
 Usage: tapo.sh monitor | siren [on|off] | info | devices
