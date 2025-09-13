@@ -56,6 +56,9 @@ then
 
     while true
     do
+
+        time=$(date +%s)
+
         send_request
 
         if [ $error_code != 0  ]
@@ -76,7 +79,7 @@ then
             aplay -q $SOUND
         fi
 
-        echo "$child_devices" | while read base64_nickname
+        while read base64_nickname
         do
             read signal_level
             read jamming_signal_level
@@ -84,13 +87,33 @@ then
             if [ $signal_level -lt $MIN_SIGNAL_LEVEL ] || [ $jamming_signal_level -gt $MAX_JAMMING_SIGNAL_LEVEL ]
             then
                 nickname=$(echo $base64_nickname | base64 -d)
-                send_notification "Tapo Hub: $nickname - Signal: $signal_level Jamming: $jamming_signal_level"
+                message="Tapo Hub: $nickname - Signal: $signal_level Jamming: $jamming_signal_level"
+                if [[ ! ${sent_messages[@]} =~ "$message" ]]
+                then
+                    sent_messages+=("$message|$time")
+                    send_notification "$message"
+                fi
+            fi
+
+        done <<< $child_devices
+
+        for message in "${sent_messages[@]}"
+        do
+            message_time=$(echo $message | cut -d "|" -f 2)
+
+            if [ $((message_time + 1800)) -gt $time ]
+            then
+                new_sent_messages+=("$message")
             fi
 
         done
 
-        seq=$((seq+1))
+        sent_messages=("${new_sent_messages[@]}")
+        new_sent_messages=()
+
+        ((seq++))
         sleep 5
+
     done
 
 else
