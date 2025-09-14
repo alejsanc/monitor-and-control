@@ -118,46 +118,90 @@ then
 
 else
 
-    if [ "$1" = "siren" ]
-    then
+    case $1 in
 
-        if [ "$2" = "" ]
-        then
-            REQUESTS="{\"method\": \"getSirenStatus\", \"params\": {\"siren\": {}}}"
-        else
-            REQUESTS="{\"method\": \"setSirenStatus\", \"params\": {\"siren\": {\"status\": \"$2\"}}}"
-        fi
+        "siren")
+
+            if [ "$2" = "" ]
+            then
+                REQUESTS="{\"method\": \"getSirenStatus\", \"params\": {\"siren\": {}}}"
+            else
+                REQUESTS="{\"method\": \"setSirenStatus\", \"params\": {\"siren\": {\"status\": \"$2\"}}}"
+            fi
+            ;;
+
+        "led")
+
+            if [ "$2" = "" ]
+            then
+                REQUESTS="{\"method\": \"getLedStatus\", \"params\": {\"led\": {}}}"
+            else
+                REQUESTS="{\"method\": \"setLedStatus\", \"params\": {\"led\": {\"config\": {\"enabled\": \"$2\"}}}}"
+            fi
+            ;;
   
-    elif [ "$1" = "info" ]
-    then
-        REQUESTS="{\"method\": \"getDeviceInfo\", \"params\": {\"device_info\": {}}}" 
-    elif [ "$1" = "devices" ]
-    then
-        REQUESTS="{\"method\": \"getChildDeviceList\", \"params\": {\"childControl\": {\"start_index\": 0}}}"
-    else
-        echo "Usage: tapo.sh monitor | siren [on|off] | info | devices"  
-        exit 
-    fi
+        "info")
+    
+            REQUESTS="{\"method\": \"getDeviceInfo\", \"params\": {\"device_info\": {}}}" 
+            ;;
+ 
+        "devices")
+    
+            REQUESTS="{\"method\": \"getChildDeviceList\", \"params\": {\"childControl\": {\"start_index\": 0}}}"
+            ;; 
+
+        *)
+            echo "Usage: tapo.sh monitor | siren [on|off] | led [on|off] | info | devices"  
+            exit 
+            ;;
+    
+    esac 
  
     init
     send_request
     
     if [ $error_code = 0 ]
     then
+
         read_result
 
-        if [ "$1" = "siren" ] && [ "$2" = "" ]
-        then
-            echo $result | jq .result.responses[0].result
-        elif [ "$1" = "info" ]
-        then
-            echo $result | jq .result.responses[0].result.device_info.basic_info
-        elif [ "$1" = "devices" ]
-        then
-            echo $result | jq .result.responses[0].result.child_device_list[]
-        else 
-            echo $result
-        fi
+        case $1 in
+
+            "siren") 
+                
+                if [ "$2" = "" ]
+                then
+                    echo $result | jq .result.responses[0].result
+                else
+                    echo $result
+                fi
+                ;;
+        
+            "led")
+                 
+                if [ "$2" = "" ]
+                then      
+                    echo $result | jq -r .result.responses[0].result.led.config.enabled
+                else
+                    echo $result
+                fi
+                ;;
+
+            "info")
+        
+                echo $result | jq .result.responses[0].result.device_info.basic_info
+                ;;
+
+            "devices")
+
+                echo $result | jq .result.responses[0].result.child_device_list[]
+                ;;
+  
+            *)
+                echo $result
+                ;;
+        esac
+
     else
         echo $response
     fi
