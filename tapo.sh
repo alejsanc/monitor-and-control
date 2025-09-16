@@ -52,6 +52,8 @@ read_result () {
 if [ "$1" = "monitor" ]
 then
 
+    declare -A sent_messages
+
     init
 
     while true
@@ -88,28 +90,25 @@ then
             then
                 nickname=$(echo $base64_nickname | base64 -d)
                 message="Tapo Hub: $nickname - Signal: $signal_level Jamming: $jamming_signal_level"
-                if [[ ! ${sent_messages[@]} =~ "$message" ]]
+                if [ ! -v sent_messages["$message"] ]
                 then
-                    sent_messages+=("$message|$time")
+                    sent_messages["$message"]=$time
                     send_notification "$message"
                 fi
             fi
 
         done <<< $child_devices
 
-        for message in "${sent_messages[@]}"
+        for message in "${!sent_messages[@]}"
         do
-            message_time=$(echo $message | cut -d "|" -f 2)
+            message_time=${sent_messages["$message"]}
 
-            if [ $((message_time + 1800)) -gt $time ]
+            if [ $((message_time + 1800)) -lt $time ]
             then
-                new_sent_messages+=("$message")
+                unset sent_messages["$message"]
             fi
 
         done
-
-        sent_messages=("${new_sent_messages[@]}")
-        new_sent_messages=()
 
         ((seq++))
         sleep 5
@@ -122,7 +121,7 @@ else
 
         "siren")
 
-            if [ "$2" = "" ]
+            if [ -z $2 ]
             then
                 REQUESTS="{\"method\": \"getSirenStatus\", \"params\": {\"siren\": {}}}"
             else
@@ -132,7 +131,7 @@ else
 
         "led")
 
-            if [ "$2" = "" ]
+            if [ -z $2 ]
             then
                 REQUESTS="{\"method\": \"getLedStatus\", \"params\": {\"led\": {}}}"
             else
@@ -169,7 +168,7 @@ else
 
             "siren") 
                 
-                if [ "$2" = "" ]
+                if [ -z $2 ]
                 then
                     echo $result | jq .result.responses[0].result
                 else
@@ -179,7 +178,7 @@ else
         
             "led")
                  
-                if [ "$2" = "" ]
+                if [ -z $2 ]
                 then      
                     echo $result | jq -r .result.responses[0].result.led.config.enabled
                 else
